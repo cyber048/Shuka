@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
+import Logo from './components/Logo';
 import HomeView from './components/HomeView';
 import CatalogView from './components/CatalogView';
 import ProductDetailView from './components/ProductDetailView';
@@ -212,6 +213,7 @@ export default function App() {
             categories={categories}
             onNavigate={navigate}
             onSelectProduct={handleSelectProduct}
+            onAddToCart={handleAddToCart}
           />
         )}
 
@@ -321,17 +323,119 @@ export default function App() {
         />
       )}
 
-      {/* Footer */}
+      {/* World-Class Modern Footer */}
       <footer className="footer">
-        <div className="footer-inner">
-          <div style={{ fontWeight: 700, fontSize: '1.1rem', color: '#ffffff' }}>
-            SHUKA — Amazon-Style Local Marketplace
+        <div className="footer-top-grid">
+          {/* Col 1: Brand & Bio */}
+          <div className="footer-col brand-col">
+            <Logo
+              size="normal"
+              theme="dark"
+              showSubtitle={true}
+              onClick={() => navigate('home')}
+            />
+            <p className="footer-desc">
+              Հայաստանի առաջատար էլեկտրոնային մարկետփլեյսը։ Տեղական արտադրողների բարձրորակ ապրանքներ, 100% կանխիկ վճարում ստանալիս և արագ առաքում ողջ Հանրապետությունով։
+            </p>
+            <div className="footer-contact-info">
+              <div className="contact-item">
+                <span>📍</span> <span>ք. Երևան, Արշակունյաց 15</span>
+              </div>
+              <div className="contact-item">
+                <span>📞</span> <span>+374 10 00-00-00 (Շուրջօրյա)</span>
+              </div>
+              <div className="contact-item">
+                <span>✉️</span> <span>support@shuka.am</span>
+              </div>
+            </div>
           </div>
-          <div style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
-            Հայաստան • Վճարումը կանխիկ առաքման պահին • SQLite Powered Full-Stack Solution
+
+          {/* Col 2: Categories */}
+          <div className="footer-col">
+            <h4 className="footer-heading">Բաժիններ</h4>
+            <ul className="footer-links">
+              {categories.map((c) => (
+                <li key={c.id}>
+                  <span onClick={() => navigate('catalog', { category: c.slug })}>
+                    {c.name}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
-          <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
-            © 2026 Shuka. Բոլոր իրավունքները պաշտպանված են։
+
+          {/* Col 3: Customer Service */}
+          <div className="footer-col">
+            <h4 className="footer-heading">Գնորդներին</h4>
+            <ul className="footer-links">
+              <li>
+                <span onClick={() => navigate('catalog')}>Բոլոր ապրանքները</span>
+              </li>
+              <li>
+                <span onClick={() => navigate('my-orders')}>Իմ պատվերները</span>
+              </li>
+              <li>
+                <span onClick={() => navigate('cart')}>Զամբյուղ</span>
+              </li>
+              <li>
+                <span onClick={() => alert('Առաքումն իրականացվում է Երևանում 24 ժամում, մարզերում՝ 48 ժամում։ Վճարումը՝ կանխիկ առաքիչին։')}>
+                  Առաքման պայմաններ
+                </span>
+              </li>
+              <li>
+                <span onClick={() => alert('Բոլոր ապրանքների համար գործում է 14 օրվա վերադարձի և փոխանակման երաշխիք։')}>
+                  Երաշխիք և վերադարձ
+                </span>
+              </li>
+            </ul>
+          </div>
+
+          {/* Col 4: For Sellers & Guarantees */}
+          <div className="footer-col">
+            <h4 className="footer-heading">Վաճառողներին</h4>
+            <ul className="footer-links">
+              {user?.is_seller ? (
+                <li>
+                  <span onClick={() => navigate('seller')} style={{ color: '#f59e0b', fontWeight: 700 }}>
+                    🏪 Վաճառողի վահանակ
+                  </span>
+                </li>
+              ) : (
+                <li>
+                  <span onClick={() => (user ? setAuthModalMode('seller_activate') : setAuthModalMode('register_seller'))}>
+                    🚀 Դարձեք Shuka-ի գործընկեր
+                  </span>
+                </li>
+              )}
+              <li>
+                <span onClick={() => alert('Վաճառողի գրանցումն անվճար է։ Կարող եք ավելացնել անսահմանափակ ապրանքներ և կառավարել պատվերները։')}>
+                  Ինչպես վաճառել Shuka-ում
+                </span>
+              </li>
+            </ul>
+
+            <div className="footer-trust-badges">
+              <div className="trust-mini-badge">
+                <span>💵</span>
+                <span>100% Կանխիկ Առաքման Պահին</span>
+              </div>
+              <div className="trust-mini-badge">
+                <span>🛡️</span>
+                <span>100% Գնորդի Պաշտպանություն</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Sub-footer */}
+        <div className="footer-bottom-bar">
+          <div className="footer-copy">
+            © 2026 <strong>Shuka.am</strong> — Հայաստանի #1 Օնլայն Շուկա։ Բոլոր իրավունքները պաշտպանված են։
+          </div>
+          <div className="footer-badges-row">
+            <span className="footer-secure-tag">🇦🇲 Տեղական Արտադրություն</span>
+            <span className="footer-secure-tag">⚡️ SQLite WAL Powered</span>
+            <span className="footer-secure-tag">🔒 SSL Անվտանգ</span>
           </div>
         </div>
       </footer>

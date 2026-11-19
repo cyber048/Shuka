@@ -248,8 +248,15 @@ async function seed() {
     insertImage.run(prodId, img1Path, 1);
 
     if (i % 2 === 0) {
-      const img2File = `seed-prod-${prodId}-alt1.webp`;
-      const img2Path = await generateProductImage(img2File, `${p.title} (Detail)`, '#475569');
+      const realAltFile = `real-prod-${prodId}-alt.webp`;
+      const realAltPath = path.join(uploadsDir, realAltFile);
+      let img2Path;
+      if (fs.existsSync(realAltPath)) {
+        img2Path = `/uploads/${realAltFile}`;
+      } else {
+        const img2File = `seed-prod-${prodId}-alt1.webp`;
+        img2Path = await generateProductImage(img2File, `${p.title} (Detail)`, '#475569');
+      }
       insertImage.run(prodId, img2Path, 2);
     }
   }

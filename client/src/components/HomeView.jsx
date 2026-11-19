@@ -1,321 +1,511 @@
 import React, { useEffect, useState } from 'react';
 import { apiGetProducts } from '../api';
 
-export default function HomeView({ categories, onNavigate, onSelectProduct }) {
-  const [newestProducts, setNewestProducts] = useState([]);
+export default function HomeView({ categories, onNavigate, onSelectProduct, onAddToCart }) {
+  const [products, setProducts] = useState([]);
+  const [activeTab, setActiveTab] = useState('newest'); // 'newest' | 'rating' | 'popular'
   const [loading, setLoading] = useState(true);
+  const [addedIds, setAddedIds] = useState({});
 
   useEffect(() => {
     async function load() {
+      setLoading(true);
       try {
-        const data = await apiGetProducts({ limit: 8, sort: 'newest' });
-        setNewestProducts(data.products || []);
+        const sortParam = activeTab === 'rating' ? 'rating' : activeTab === 'popular' ? 'price_desc' : 'newest';
+        const data = await apiGetProducts({ limit: 12, sort: sortParam });
+        setProducts(data.products || []);
       } catch (err) {
-        console.error('Failed to load newest products:', err);
+        console.error('Failed to load products for homepage:', err);
       } finally {
         setLoading(false);
       }
     }
     load();
-  }, []);
+  }, [activeTab]);
+
+  const handleQuickAdd = async (e, product) => {
+    e.stopPropagation();
+    if (!onAddToCart) {
+      onSelectProduct(product.id);
+      return;
+    }
+    try {
+      await onAddToCart(product.id, 1);
+      setAddedIds((prev) => ({ ...prev, [product.id]: true }));
+      setTimeout(() => {
+        setAddedIds((prev) => ({ ...prev, [product.id]: false }));
+      }, 2500);
+    } catch (err) {
+      alert(err.message || 'Չհաջողվեց ավելացնել');
+    }
+  };
 
   const getCategoryMeta = (slug) => {
     switch (slug) {
       case 'electronics':
-        return { icon: '⚡', color: 'from-blue-600 to-indigo-700', bg: 'bg-blue-50 text-blue-700' };
+        return { icon: '⚡', name: 'Էլեկտրոնիկա', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.1)', count: '7+ ապրանք' };
       case 'home-kitchen':
-        return { icon: '🍳', color: 'from-amber-500 to-orange-600', bg: 'bg-amber-50 text-amber-700' };
+        return { icon: '🍳', name: 'Տուն և Խոհանոց', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)', count: '7+ ապրանք' };
       case 'food-delicacies':
-        return { icon: '🍇', color: 'from-emerald-500 to-teal-700', bg: 'bg-emerald-50 text-emerald-700' };
+        return { icon: '🍇', name: 'Հայկական Բարիքներ', color: '#10b981', bg: 'rgba(16, 185, 129, 0.1)', count: '7+ ապրանք' };
       case 'handmade-crafts':
-        return { icon: '🏺', color: 'from-rose-500 to-pink-700', bg: 'bg-rose-50 text-rose-700' };
+        return { icon: '🏺', name: 'Ձեռագործ & Արվեստ', color: '#ec4899', bg: 'rgba(236, 72, 153, 0.1)', count: '7+ ապրանք' };
       case 'books':
-        return { icon: '📚', color: 'from-violet-500 to-purple-700', bg: 'bg-violet-50 text-violet-700' };
+        return { icon: '📚', name: 'Գրքեր & Գրենական', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.1)', count: '7+ ապրանք' };
       case 'sports':
-        return { icon: '🏔️', color: 'from-cyan-500 to-blue-700', bg: 'bg-cyan-50 text-cyan-700' };
+        return { icon: '🏔️', name: 'Սպորտ & Տուրիզմ', color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.1)', count: '7+ ապրանք' };
       default:
-        return { icon: '🛍️', color: 'from-slate-600 to-slate-800', bg: 'bg-slate-50 text-slate-700' };
+        return { icon: '🛍️', name: 'Այլ', color: '#64748b', bg: 'rgba(100, 116, 139, 0.1)', count: '42+ ապրանք' };
     }
   };
 
+  const featuredDeal = products[0] || {
+    id: 1,
+    title: 'Wireless Bluetooth Earbuds Pro (Active Noise Cancellation)',
+    price_amd: 18500,
+    rating_avg: 5,
+    rating_count: 18,
+    main_image: '/uploads/real-prod-1.webp',
+    store_name: 'Ararat Electronics'
+  };
+
   return (
-    <div>
-      {/* Hero Banner */}
-      <div
-        style={{
-          background: 'radial-gradient(ellipse at top left, #1e293b 0%, #0f172a 100%)',
-          color: '#ffffff',
-          borderRadius: '24px',
-          padding: '3rem 2.5rem',
-          marginBottom: '2rem',
-          position: 'relative',
-          overflow: 'hidden',
-          boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
-        }}
-      >
-        <div style={{ maxWidth: '750px', position: 'relative', zIndex: 10 }}>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              background: 'rgba(245, 158, 11, 0.15)',
-              border: '1px solid rgba(245, 158, 11, 0.3)',
-              color: '#fbbf24',
-              padding: '0.35rem 0.9rem',
-              borderRadius: '9999px',
-              fontSize: '0.8rem',
-              fontWeight: 800,
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px',
-              marginBottom: '1.25rem'
-            }}
-          >
-            🇦🇲 Հայաստանի №1 Տեղական Մարկետփլեյսը
-          </div>
+    <div className="home-view-container">
+      {/* ===================== HERO SECTION ===================== */}
+      <section className="hero-section">
+        {/* Ambient Glow Orbs */}
+        <div className="hero-glow-1"></div>
+        <div className="hero-glow-2"></div>
 
-          <h1 style={{ fontSize: '2.6rem', fontWeight: 900, lineHeight: 1.15, marginBottom: '1rem', letterSpacing: '-0.5px' }}>
-            Գնեք տեղականից՝ <span style={{ color: '#f59e0b' }}>մեկ զամբյուղով</span>, վճարեք կանխիկ
-          </h1>
+        <div className="hero-grid">
+          {/* Hero Left Content */}
+          <div className="hero-content">
+            <div className="hero-badge">
+              <span className="hero-badge-flag">🇦🇲</span>
+              <span>ՀԱՅԱՍՏԱՆԻ #1 ՕՆԼԱՅՆ ՄԱՐԿԵՏՓԼԵՅՍԸ</span>
+              <span className="hero-badge-pill">MULTI-SELLER</span>
+            </div>
 
-          <p style={{ fontSize: '1.05rem', color: '#cbd5e1', marginBottom: '2rem', lineHeight: '1.6' }}>
-            Բացահայտեք 40+ հայկական արտադրանքներ, էլեկտրոնիկա, ձեռագործ աշխատանքներ և բարիքներ։ Պատվիրեք անմիջապես վաճառողներից առանց բանկային քարտերի։
-          </p>
+            <h1 className="hero-title">
+              Գնեք տեղականից՝ <br />
+              <span className="hero-highlight">մեկ զամբյուղով</span>, վճարեք կանխիկ
+            </h1>
 
-          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
-            <button
-              className="btn btn-primary"
-              style={{ padding: '0.85rem 1.8rem', fontSize: '1rem', borderRadius: '12px' }}
-              onClick={() => onNavigate('catalog')}
-            >
-              Դիտել բոլոր ապրանքները →
-            </button>
+            <p className="hero-subtitle">
+              42+ պրեմիում տեսականի հայկական արտադրողներից և առաջատար խանութներից։
+              Պատվիրեք անմիջապես վաճառողներից՝ առանց բանկային քարտերի, 100% անվտանգ առաքմամբ։
+            </p>
 
-            {/* Quick search tags */}
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Հանրաճանաչ՝</span>
-              {['Մեղր', 'Կերամիկա', 'Earbuds', 'Սրճեփ', 'Չիր'].map((tag) => (
+            <div className="hero-actions">
+              <button
+                className="btn-hero-primary"
+                onClick={() => onNavigate('catalog')}
+              >
+                <span>Բացահայտել բոլոր ապրանքները</span>
+                <span className="btn-arrow">→</span>
+              </button>
+
+              <button
+                className="btn-hero-ghost"
+                onClick={() => onNavigate('catalog', { sort: 'rating' })}
+              >
+                <span>⭐ Թոփ վարկանիշ</span>
+              </button>
+            </div>
+
+            {/* Quick Keyword Pills */}
+            <div className="hero-quick-tags">
+              <span className="quick-tags-label">🔥 Թրենդային՝</span>
+              {[
+                { label: '🍯 Լոռվա Մեղր', query: 'մեղր' },
+                { label: '🎧 Earbuds Pro', query: 'earbuds' },
+                { label: '☕️ Կավե Սրճեփ', query: 'սրճեփ' },
+                { label: '🏺 Կերամիկա', query: 'կերամիկա' },
+                { label: '🍷 Չիր', query: 'չիր' },
+                { label: '⌨️ Keyboard', query: 'keyboard' }
+              ].map((item) => (
                 <span
-                  key={tag}
-                  onClick={() => onNavigate('catalog', { q: tag })}
-                  style={{
-                    fontSize: '0.78rem',
-                    background: 'rgba(255,255,255,0.08)',
-                    color: '#e2e8f0',
-                    padding: '0.25rem 0.65rem',
-                    borderRadius: '9999px',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#f59e0b';
-                    e.currentTarget.style.color = '#0f172a';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                    e.currentTarget.style.color = '#e2e8f0';
-                  }}
+                  key={item.label}
+                  className="quick-tag-pill"
+                  onClick={() => onNavigate('catalog', { q: item.query })}
                 >
-                  {tag}
+                  {item.label}
                 </span>
               ))}
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Trust & Features Bar */}
-      <div className="trust-bar">
-        <div className="trust-item">
-          <div className="trust-icon">🚚</div>
-          <div>
-            <div className="trust-title">Առաքում ողջ ՀՀ-ում</div>
-            <div className="trust-desc">Երևան և բոլոր 10 մարզեր</div>
-          </div>
-        </div>
+          {/* Hero Right: Interactive "Deal of the Day" Glass Card */}
+          <div className="hero-card-column">
+            <div className="featured-deal-card" onClick={() => onSelectProduct(featuredDeal.id)}>
+              <div className="deal-card-header">
+                <span className="deal-tag">⚡️ ՕՐՎԱ ԹՈՓ ԱՊՐԱՆՔ</span>
+                <span className="deal-discount">-20% ԶԵՂՉ</span>
+              </div>
 
-        <div className="trust-item">
-          <div className="trust-icon">💵</div>
-          <div>
-            <div className="trust-title">Կանխիկ առաքման պահին</div>
-            <div className="trust-desc">100% ապահով առանց քարտի</div>
-          </div>
-        </div>
+              <div className="deal-img-container">
+                <img
+                  src={featuredDeal.main_image || '/uploads/real-prod-1.webp'}
+                  alt={featuredDeal.title}
+                  className="deal-img"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = '/uploads/real-prod-1.webp';
+                  }}
+                />
+              </div>
 
-        <div className="trust-item">
-          <div className="trust-icon">🛒</div>
-          <div>
-            <div className="trust-title">Multi-Seller Զամբյուղ</div>
-            <div className="trust-desc">Մեկ պատվեր տարբեր խանութներից</div>
-          </div>
-        </div>
+              <div className="deal-card-body">
+                <div className="deal-store-row">
+                  <span className="store-badge">🏪 {featuredDeal.store_name}</span>
+                  <span className="stock-pill">⚡️ Առկա է</span>
+                </div>
 
-        <div className="trust-item">
-          <div className="trust-icon">🛡️</div>
-          <div>
-            <div className="trust-title">Ստուգված Վաճառողներ</div>
-            <div className="trust-desc">Որակի վերահսկողություն</div>
-          </div>
-        </div>
-      </div>
+                <h3 className="deal-title">{featuredDeal.title}</h3>
 
-      {/* Popular Categories */}
-      <div style={{ marginBottom: '3rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-          <div>
-            <h2 style={{ fontSize: '1.45rem', fontWeight: 800, letterSpacing: '-0.3px' }}>
-              Բաժիններ ըստ հետաքրքրության
-            </h2>
-            <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
-              Ընտրեք Ձեզ անհրաժեշտ կատեգորիան
+                <div className="deal-rating-row">
+                  <span className="stars">★★★★★</span>
+                  <span className="rating-val">5.0</span>
+                  <span className="rating-sub">(Ստուգված գնորդներ)</span>
+                </div>
+
+                <div className="deal-price-row">
+                  <div>
+                    <div className="deal-price-old">
+                      {Math.round(featuredDeal.price_amd * 1.25).toLocaleString()} ֏
+                    </div>
+                    <div className="deal-price-current">
+                      {featuredDeal.price_amd.toLocaleString()} ֏
+                    </div>
+                  </div>
+
+                  <button
+                    className={`deal-add-btn ${addedIds[featuredDeal.id] ? 'btn-added' : ''}`}
+                    onClick={(e) => handleQuickAdd(e, featuredDeal)}
+                  >
+                    {addedIds[featuredDeal.id] ? '✓ Ավելացվեց' : '+ Զամբյուղ'}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-            gap: '1rem'
-          }}
-        >
+        {/* Hero Bottom Live KPI Bar */}
+        <div className="hero-kpi-bar">
+          <div className="kpi-item">
+            <div className="kpi-number">42+</div>
+            <div className="kpi-label">Պրեմիում ապրանքներ</div>
+          </div>
+          <div className="kpi-divider"></div>
+          <div className="kpi-item">
+            <div className="kpi-number">3+</div>
+            <div className="kpi-label">Ստուգված հայկական խանութներ</div>
+          </div>
+          <div className="kpi-divider"></div>
+          <div className="kpi-item">
+            <div className="kpi-number">24-48ժ</div>
+            <div className="kpi-label">Արագ առաքում ողջ ՀՀ-ում</div>
+          </div>
+          <div className="kpi-divider"></div>
+          <div className="kpi-item">
+            <div className="kpi-number">100%</div>
+            <div className="kpi-label">Կանխիկ վճարում ստանալիս</div>
+          </div>
+        </div>
+      </section>
+
+      {/* ===================== TRUST / VALUE BAR ===================== */}
+      <section className="trust-section">
+        <div className="trust-grid">
+          <div className="trust-card">
+            <div className="trust-icon-box trust-blue">🚚</div>
+            <div>
+              <h4 className="trust-heading">Արագ Առաքում ՀՀ-ում</h4>
+              <p className="trust-text">Երևանում 24 ժամում, մարզերում՝ 48 ժամում անմիջապես հասցեին։</p>
+            </div>
+          </div>
+
+          <div className="trust-card">
+            <div className="trust-icon-box trust-amber">💵</div>
+            <div>
+              <h4 className="trust-heading">100% Կանխիկ Վճարում</h4>
+              <p className="trust-text">Ոչ մի քարտային ռիսկ. վճարեք առաքիչին ապրանքը տեսնելուց հետո։</p>
+            </div>
+          </div>
+
+          <div className="trust-card">
+            <div className="trust-icon-box trust-emerald">🛒</div>
+            <div>
+              <h4 className="trust-heading">Multi-Seller Զամբյուղ</h4>
+              <p className="trust-text">Պատվիրեք տարբեր վաճառողներից միաժամանակ՝ մեկ հարմար զամբյուղով։</p>
+            </div>
+          </div>
+
+          <div className="trust-card">
+            <div className="trust-icon-box trust-purple">🛡️</div>
+            <div>
+              <h4 className="trust-heading">Գնորդի Պաշտպանություն</h4>
+              <p className="trust-text">Ստուգված տեղական խանութներ, որակի վերահսկում և հետվերադարձ։</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ===================== CATEGORY EXPLORER ===================== */}
+      <section className="categories-section">
+        <div className="section-header-row">
+          <div>
+            <div className="section-eyebrow">ՏԵՍԱԿԱՆԻ</div>
+            <h2 className="section-title">Ընտրեք ըստ Կատեգորիաների</h2>
+          </div>
+          <button
+            className="section-link-btn"
+            onClick={() => onNavigate('catalog')}
+          >
+            Բոլոր կատեգորիաները →
+          </button>
+        </div>
+
+        <div className="category-cards-grid">
           {categories.map((c) => {
             const meta = getCategoryMeta(c.slug);
             return (
               <div
                 key={c.id}
+                className="category-showcase-card"
                 onClick={() => onNavigate('catalog', { category: c.slug })}
-                style={{
-                  background: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '16px',
-                  padding: '1.4rem 1rem',
-                  textAlign: 'center',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-4px)';
-                  e.currentTarget.style.borderColor = '#f59e0b';
-                  e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0,0,0,0.08)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.borderColor = '#e2e8f0';
-                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)';
-                }}
               >
-                <div style={{ fontSize: '2.2rem', marginBottom: '0.6rem' }}>
+                <div className="category-icon-bubble" style={{ background: meta.bg, color: meta.color }}>
                   {meta.icon}
                 </div>
-                <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#0f172a' }}>
-                  {c.name}
+                <div className="category-card-info">
+                  <div className="category-name">{c.name}</div>
+                  <div className="category-count">{meta.count}</div>
                 </div>
+                <div className="category-arrow">→</div>
               </div>
             );
           })}
         </div>
-      </div>
+      </section>
 
-      {/* Newest Products Section */}
-      <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+      {/* ===================== CURATED PRODUCTS SHOWCASE ===================== */}
+      <section className="products-showcase-section">
+        <div className="section-header-row">
           <div>
-            <h2 style={{ fontSize: '1.45rem', fontWeight: 800, letterSpacing: '-0.3px' }}>
-              ✨ Ամենանոր ապրանքները
-            </h2>
-            <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
-              Թարմ ավելացված տեսականի
-            </div>
+            <div className="section-eyebrow">ԼԱՎԱԳՈՒՅՆ ԸՆՏՐԱՆԻ</div>
+            <h2 className="section-title">✨ Հանրաճանաչ և Թարմ Ապրանքներ</h2>
           </div>
 
-          <button
-            style={{
-              background: '#f1f5f9',
-              border: 'none',
-              color: '#0f172a',
-              fontWeight: 700,
-              padding: '0.5rem 1rem',
-              borderRadius: '9999px',
-              fontSize: '0.88rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.35rem'
-            }}
-            onClick={() => onNavigate('catalog')}
-          >
-            <span>Տեսնել բոլորը</span>
-            <span>→</span>
-          </button>
+          {/* Filter Tabs */}
+          <div className="tab-pill-group">
+            <button
+              className={`tab-pill ${activeTab === 'newest' ? 'active' : ''}`}
+              onClick={() => setActiveTab('newest')}
+            >
+              ✨ Ամենանորերը
+            </button>
+            <button
+              className={`tab-pill ${activeTab === 'rating' ? 'active' : ''}`}
+              onClick={() => setActiveTab('rating')}
+            >
+              ⭐ Բարձր վարկանիշ
+            </button>
+            <button
+              className={`tab-pill ${activeTab === 'popular' ? 'active' : ''}`}
+              onClick={() => setActiveTab('popular')}
+            >
+              🔥 Թոփ առաջարկներ
+            </button>
+          </div>
         </div>
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '4rem', color: '#64748b' }}>
-            Բեռնվում են ապրանքները...
+          <div className="loading-state-box">
+            <div className="spinner"></div>
+            <div>Բեռնվում են որակյալ ապրանքները...</div>
           </div>
         ) : (
           <div className="product-grid">
-            {newestProducts.map((p, idx) => (
+            {products.map((p, idx) => (
               <div
                 key={p.id}
-                className="product-card"
+                className="premium-product-card"
                 onClick={() => onSelectProduct(p.id)}
               >
-                <div className="product-card-img-wrap">
+                {/* Image Container with Badges */}
+                <div className="prod-img-wrap">
                   <img
                     src={p.main_image || '/placeholder.png'}
                     alt={p.title}
-                    className="product-card-img"
+                    className="prod-img"
                     onError={(e) => {
                       e.target.onerror = null;
-                      e.target.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" fill="%23f1f5f9"><rect width="100%" height="100%"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%2394a3b8" font-size="20">Shuka Product</text></svg>';
+                      e.target.src = '/uploads/real-prod-1.webp';
                     }}
                   />
-                  {idx % 3 === 0 && <span className="product-card-badge">ՀԱՆՐԱՃԱՆԱՉ</span>}
-                  {idx % 3 === 1 && <span className="product-card-badge">ՏԵՂԱԿԱՆ</span>}
+
+                  {/* Badges */}
+                  <div className="prod-badge-stack">
+                    {idx === 0 && <span className="prod-badge-deal">🔥 ԹՈՓ 1</span>}
+                    {idx % 4 === 1 && <span className="prod-badge-new">✨ ՆՈՐՈՒՅԹ</span>}
+                    {idx % 4 === 2 && <span className="prod-badge-armenian">🇦🇲 ՏԵՂԱԿԱՆ</span>}
+                    {idx % 4 === 3 && <span className="prod-badge-discount">-15%</span>}
+                  </div>
+
+                  {/* Stock pill overlay */}
+                  {p.stock <= 2 && p.stock > 0 ? (
+                    <div className="prod-stock-badge low-stock">Մնաց {p.stock} հատ</div>
+                  ) : p.stock === 0 ? (
+                    <div className="prod-stock-badge out-stock">Սպառված է</div>
+                  ) : (
+                    <div className="prod-stock-badge in-stock">Առկա է</div>
+                  )}
                 </div>
 
-                <div className="product-card-body">
-                  <div className="product-card-store">
-                    <span>🏪</span>
-                    <span>{p.store_name}</span>
+                {/* Card Content */}
+                <div className="prod-body">
+                  <div className="prod-store-row">
+                    <span className="prod-store-name">🏪 {p.store_name}</span>
+                    <span className="prod-category-name">{p.category_name}</span>
                   </div>
 
-                  <div className="product-card-title">{p.title}</div>
+                  <h3 className="prod-title" title={p.title}>
+                    {p.title}
+                  </h3>
 
-                  <div className="rating-row">
-                    <span>{'★'.repeat(Math.round(p.rating_avg || 0))}</span>
-                    <span>{'☆'.repeat(5 - Math.round(p.rating_avg || 0))}</span>
-                    <span className="rating-count">({p.rating_count || 0})</span>
+                  {/* Rating */}
+                  <div className="prod-rating-row">
+                    <span className="prod-stars">
+                      {'★'.repeat(Math.round(p.rating_avg || 0))}
+                      {'☆'.repeat(5 - Math.round(p.rating_avg || 0))}
+                    </span>
+                    <span className="prod-rating-num">
+                      {(p.rating_avg || 0).toFixed(1)}
+                    </span>
+                    <span className="prod-rating-count">
+                      ({p.rating_count || 0})
+                    </span>
                   </div>
 
-                  <div className="product-card-bottom">
-                    <div className="product-card-price">
-                      {p.price_amd.toLocaleString()} ֏
+                  {/* Bottom: Price + Quick Add */}
+                  <div className="prod-bottom">
+                    <div className="prod-price-box">
+                      <span className="prod-price-amount">
+                        {p.price_amd.toLocaleString()}
+                      </span>
+                      <span className="prod-currency">֏</span>
                     </div>
 
-                    {p.stock <= 2 && p.stock > 0 ? (
-                      <span className="badge badge-low-stock">
-                        Մնաց {p.stock}
-                      </span>
-                    ) : p.stock === 0 ? (
-                      <span className="badge badge-out-of-stock">
-                        Սպառված
-                      </span>
-                    ) : (
-                      <span className="badge badge-in-stock">
-                        Առկա է
-                      </span>
-                    )}
+                    <button
+                      className={`prod-quick-add-btn ${addedIds[p.id] ? 'btn-added' : ''}`}
+                      onClick={(e) => handleQuickAdd(e, p)}
+                      title="Ավելացնել զամբյուղ"
+                      disabled={p.stock === 0}
+                    >
+                      {addedIds[p.id] ? '✓' : '+ 🛒'}
+                    </button>
                   </div>
                 </div>
               </div>
             ))}
           </div>
         )}
-      </div>
+
+        <div className="catalog-cta-footer">
+          <button
+            className="btn-view-all-catalog"
+            onClick={() => onNavigate('catalog')}
+          >
+            <span>Տեսնել բոլոր 42+ ապրանքները կատալոգում</span>
+            <span>→</span>
+          </button>
+        </div>
+      </section>
+
+      {/* ===================== SOCIAL PROOF / REVIEWS ===================== */}
+      <section className="testimonials-section">
+        <div className="testimonials-header">
+          <div className="section-eyebrow">ԻՍԿԱԿԱՆ ԿԱՐԾԻՔՆԵՐ</div>
+          <h2 className="section-title">Ինչ են ասում մեր գնորդները</h2>
+          <p className="testimonials-sub">
+            Հազարավոր գոհ հաճախորդներ Երևանում և ՀՀ բոլոր մարզերում
+          </p>
+        </div>
+
+        <div className="testimonials-grid">
+          <div className="testimonial-card">
+            <div className="testi-stars">★★★★★</div>
+            <p className="testi-text">
+              «Առաջին անգամ առանց բանկային քարտ մուտքագրելու հանգիստ պատվիրեցի։ Ապրանքը հասավ հաջորդ օրը, տեղում ստուգեցի ու կանխիկ վճարեցի։ Շատ ապահով է ու հարմար։»
+            </p>
+            <div className="testi-author">
+              <div className="testi-avatar">ԱԳ</div>
+              <div>
+                <div className="testi-name">Արմեն Գասպարյան</div>
+                <div className="testi-location">📍 Երևան, Կենտրոն</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="testimonial-card">
+            <div className="testi-stars">★★★★★</div>
+            <p className="testi-text">
+              «Հայկական տեղական արտադրանքի ընտրանին ուղղակի հրաշալի է։ Մեղրը և կավե սրճեփը գերազանց որակի էին, փաթեթավորումն էլ շատ խնամքով էր արված։»
+            </p>
+            <div className="testi-author">
+              <div className="testi-avatar" style={{ background: '#ec4899' }}>ԱՄ</div>
+              <div>
+                <div className="testi-name">Անահիտ Մելքոնյան</div>
+                <div className="testi-location">📍 Գյումրի</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="testimonial-card">
+            <div className="testi-stars">★★★★★</div>
+            <p className="testi-text">
+              «Մեկ զամբյուղով տարբեր խանութներից պատվիրեցի միաժամանակ՝ և՛ տեխնիկա, և՛ ձեռագործ նվերներ։ Կատարյալ հարթակ է, Amazon-ից ոչնչով չի զիջում։»
+            </p>
+            <div className="testi-author">
+              <div className="testi-avatar" style={{ background: '#3b82f6' }}>ԴՍ</div>
+              <div>
+                <div className="testi-name">Դավիթ Սարգսյան</div>
+                <div className="testi-location">📍 Վանաձոր</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ===================== SELLER CTA BANNER ===================== */}
+      <section className="seller-cta-section">
+        <div className="seller-cta-inner">
+          <div className="seller-cta-content">
+            <span className="seller-badge">🏪 ԳՈՐԾԸՆԿԵՐՈՒԹՅՈՒՆ</span>
+            <h2 className="seller-cta-title">
+              Ունե՞ք սեփական արտադրանք կամ խանութ Հայաստանում
+            </h2>
+            <p className="seller-cta-desc">
+              Միացեք Shuka-ին անվճար, տեղադրեք Ձեր ապրանքները հաշված րոպեներում և վաճառեք հազարավոր գնորդների ողջ Հայաստանով։
+            </p>
+            <div className="seller-perks-row">
+              <span>✓ 0֏ Գրանցման վճար</span>
+              <span>✓ Հարմար Seller Dashboard</span>
+              <span>✓ Ավտոմատ առաքման կառավարում</span>
+            </div>
+          </div>
+          <div className="seller-cta-action">
+            <button
+              className="btn-become-seller"
+              onClick={() => onNavigate('catalog')}
+            >
+              Սկսել վաճառել Shuka-ում →
+            </button>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
