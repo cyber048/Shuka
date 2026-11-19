@@ -235,9 +235,16 @@ async function seed() {
 
     const prodId = Number(res.lastInsertRowid);
 
-    // Create 1 to 3 images for each product
-    const img1File = `seed-prod-${prodId}-main.webp`;
-    const img1Path = await generateProductImage(img1File, p.title, color);
+    // Create 1 to 3 images for each product (prioritize real photos if available)
+    const realImgFile = `real-prod-${prodId}.webp`;
+    const realImgPath = path.join(uploadsDir, realImgFile);
+    let img1Path;
+    if (fs.existsSync(realImgPath)) {
+      img1Path = `/uploads/${realImgFile}`;
+    } else {
+      const img1File = `seed-prod-${prodId}-main.webp`;
+      img1Path = await generateProductImage(img1File, p.title, color);
+    }
     insertImage.run(prodId, img1Path, 1);
 
     if (i % 2 === 0) {
